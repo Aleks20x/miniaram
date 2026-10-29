@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini LoL ARAM - OneCompiler</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0f1115;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #gameCanvas {
+            display: block;
+            background: #181c24;
+        }
+        
+        #ui-top {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(15, 17, 21, 0.5);
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+            white-space: nowrap;
+            max-width: 95%;
+            overflow-x: auto;
+        }
+
+        #ui-dragon {
+            position: absolute;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: rgba(15, 17, 21, 0.5);
+            padding: 6px 14px;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        
+        #ui-zoom {
+            position: absolute;
+            top: 65px;
+            right: 15px;
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
+            z-index: 10;
+        }
+        .btn-zoom {
+            background: #21262d;
+            color: white;
+            border: 1px solid #30363d;
+            padding: 6px 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: 0.2s;
+        }
+        .btn-zoom:hover { background: #30363d; }
+
+        #ui-skills {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(15, 17, 21, 0.5);
+            padding: 12px 18px;
+            border-radius: 16px;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            z-index: 10;
+        }
+        .skill-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .skill-btn {
+            width: 52px;
+            height: 52px;
+            background: #21262d;
+            color: white;
+            border: 2px solid #58a6ff;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: 0.1s;
+            touch-action: none;
+        }
+        .skill-btn.ultimate {
+            border-color: #f1c40f;
+        }
+        .skill-btn:active { transform: scale(0.93); background: #30363d; }
+        .skill-cd {
+            position: absolute;
+            bottom: 3px;
+            font-size: 8px;
+            color: #f1c40f;
+            font-weight: bold;
+        }
+        .skill-label {
+            position: absolute;
+            top: 2px;
+            font-size: 8px;
+            color: #8b949e;
+        }
+
+        .focus-menu {
+            display: none;
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 17, 21, 0.95);
+            border: 1px solid #58a6ff;
+            border-radius: 10px;
+            padding: 6px;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 20;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.7);
+        }
+        .focus-menu.show { display: flex; }
+        .focus-option {
+            background: #21262d;
+            color: white;
+            padding: 6px 10px;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            border: 1px solid #30363d;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .focus-option:hover {
+            background: #58a6ff;
+            color: #000;
+            border-color: #58a6ff;
+        }
+
+        #game-over-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 17, 21, 0.5);
+            z-index: 30;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        /* TELA DE SELEÇÃO DE PERSONAGENS COM DESIGN NEON */
+        #selection-screen {
+            display: flex;
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(10, 12, 16, 0.92);
+            z-index: 40;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            backdrop-filter: blur(4px);
+        }
+        .selection-title {
+            font-size: 36px;
+            margin-bottom: 40px;
+            color: #58a6ff;
+            text-shadow: 0 0 15px rgba(88, 166, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .hero-cards {
+            display: flex; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            justify-content: center;
+            max-width: 90%;
+        }
+        .hero-card {
+            background: #161b22;
+            border: 2px solid #30363d;
+            padding: 25px 15px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-align: center;
+            width: 140px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .hero-card:hover {
+            border-color: #58a6ff;
+            background: #21262d;
+            transform: translateY(-8px);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.4), inset 0 0 10px rgba(88, 166, 255, 0.2);
+            color: #58a6ff;
+        }
+        .hero-card .emoji {
+            font-size: 45px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+        }
+    </style>
+</head>
+<body>
+
+    <div id="selection-screen">
+        <h1 class="selection-title">Selecione sua Classe</h1>
+        <div class="hero-cards">
+            <div class="hero-card" onclick="startGame(0)">
+                <span class="emoji">🏹</span>
+                <span>Atirador</span>
+            </div>
+            <div class="hero-card" onclick="startGame(1)">
+                <span class="emoji">⚓</span>
+                <span>Tanque</span>
+            </div>
+            <div class="hero-card" onclick="startGame(2)">
+                <span class="emoji">💖</span>
+                <span>Suporte</span>
+            </div>
+            <div class="hero-card" onclick="startGame(3)">
+                <span class="emoji">🔪</span>
+                <span>Assassino</span>
+            </div>
+            <div class="hero-card" onclick="startGame(4)">
+                <span class="emoji">🎩</span>
+                <span>Mago</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-top">
+        <span style="color: #58a6ff;">Nexus: <span id="blue-score">100%</span></span>
+        <span style="color: #8b949e;">VS</span>
+        <span style="color: #f85149;">Nexus: <span id="red-score">100%</span></span>
+        <span style="color: #3fb950; margin-left: 5px;">Kills: <span id="player-kills">0</span></span>
+        <span style="color: #e3b341; margin-left: 5px;">Deaths: <span id="player-deaths">0</span></span>
+    </div>
+
+    <div id="ui-dragon">
+        <span style="color: #f1c40f;">🐉 Dragão: <span id="dragon-timer">03:00</span></span>
+        <span style="color: #8b949e;">|</span>
+        <span style="color: #58a6ff;">Azul: <span id="blue-dragons">0</span></span>
+        <span style="color: #f85149;">Vermelho: <span id="red-dragons">0</span></span>
+    </div>
+
+    <div id="ui-zoom">
+        <button class="btn-zoom" onclick="zoomIn()">➕</button>
+        <button class="btn-zoom" onclick="zoomOut()">➖</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="game-over-screen">
+        <h1 id="game-over-title" style="font-size: 32px; margin-bottom: 15px;"></h1>
+        <p style="color: #8b949e; margin-bottom: 20px; font-size: 15px;">Fim de jogo!</p>
+        <button class="btn-zoom" style="padding: 12px 24px; font-size: 16px; background: #2ea043; border-color: #3fb950; cursor: pointer;" onclick="restartGame()">🔄 Trocar Herói / Reiniciar</button>
+    </div>
+
+    <div id="ui-skills">
+        <div class="skill-row">
+            <button class="skill-btn" onclick="useSkill(0)">
+                <span class="skill-label">Q</span>⚡<span class="skill-cd" id="cd-0">Pronto</span>
+            </button>
+            <button class="skill-btn" onclick="useSkill(1)">
+                <span class="skill-label">W</span>💫<span class="skill-cd" id="cd-1">Pronto</span>
+            </button>
+            <button class="skill-btn" onclick="useSkill(2)">
+                <span class="skill-label">E</span>💥<span class="skill-cd" id="cd-2">Pronto</span>
+            </button>
+            <button class="skill-btn ultimate" onclick="useSkill(3)">
+                <span class="skill-label">R</span>🌟<span class="skill-cd" id="cd-3">Pronto</span>
+            </button>
+        </div>
+        <div class="skill-row">
+            <div style="position: relative;">
+                <button class="skill-btn" onclick="toggleFocusMenu()" style="font-size: 9px; font-weight: bold;">
+                    <span class="skill-label">A</span><span id="focus-display" style="color: #58a6ff;">AtqGeral</span>
+                </button>
+                <div id="focus-menu" class="focus-menu">
+                    <div class="focus-option" onclick="setFocus('attack')">⚔️ AtqGeral</div>
+                    <div class="focus-option" onclick="setFocus('heroes')">🔪 Heróis</div>
+                    <div class="focus-option" onclick="setFocus('minions')">👾 Minions</div>
+                    <div class="focus-option" onclick="setFocus('towers_nexus')">🗼 Torres</div>
+                    <div class="focus-option" onclick="setFocus('dragon')">🐉 Monstro</div>
+                    <div class="focus-option" onclick="setFocus('escape')">🏃 Fuga</div>
+                </div>
+            </div>
+            
+            <button class="skill-btn" onclick="executeFlash(playerHero, -1)">
+                <span class="skill-label">S</span>⬅️<span class="skill-cd" id="cd-4">Pronto</span>
+            </button>
+            <button class="skill-btn" onclick="executeFlash(playerHero, 1)">
+                <span class="skill-label">D</span>➡️<span class="skill-cd" id="cd-5">Pronto</span>
+            </button>
+            <button class="skill-btn" onclick="useSkill(6)">
+                <span class="skill-label">F</span>🔥<span class="skill-cd" id="cd-6">Pronto</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let zoom = 1.0;
+        let cameraX = 0;
+        let lockedCameraX = null;
+
+        function zoomIn() { zoom = Math.min(zoom + 0.2, 2.0); }
+        function zoomOut() { zoom = Math.max(zoom - 0.2, 0.4); }
+
+        window.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+            const key = e.key.toUpperCase();
+            if (key === 'Q') useSkill(0);
+            else if (key === 'W') useSkill(1);
+            else if (key === 'E') useSkill(2);
+            else if (key === 'R') useSkill(3);
+            else if (key === 'A') cyclePlayerFocus(); 
+            else if (key === 'S') executeFlash(playerHero, -1);
+            else if (key === 'D') executeFlash(playerHero, 1);
+            else if (key === 'F') useSkill(6);
+            else if (key === '+' || key === '=') zoomIn();
+            else if (key === '-' || key === '_') zoomOut();
+        });
+
+        const WORLD_WIDTH = 3200;
+        const WORLD_HEIGHT = 600;
+        let gameState = 'selection'; // Estado inicial agora é seleção de heróis
+
+        const focusModesList = ['attack', 'escape', 'minions', 'heroes', 'towers_nexus', 'dragon'];
+        const focusModeLabels = {
+            'attack': 'AtqGeral',
+            'minions': 'Minions',
+            'heroes': 'Heróis',
+            'towers_nexus': 'Torres',
+            'dragon': 'Monstro',
+            'escape': 'Fuga'
+        };
+
+        function toggleFocusMenu() {
+            document.getElementById('focus-menu').classList.toggle('show');
+        }
+
+        function setFocus(mode) {
+            playerHero.focusMode = mode;
+            playerHero.focusIndex = focusModesList.indexOf(mode);
+            document.getElementById('focus-display').innerText = focusModeLabels[mode];
+            createEffect(playerHero.x, playerHero.y, `Foco: ${focusModeLabels[mode]}`);
+            document.getElementById('focus-menu').classList.remove('show');
+            playerHero.customEscapeTarget = null;
+        }
+
+        function cyclePlayerFocus() {
+            if (typeof playerHero.focusIndex === 'undefined') {
+                playerHero.focusIndex = focusModesList.indexOf(playerHero.focusMode);
+                if (playerHero.focusIndex === -1) playerHero.focusIndex = 0;
+            }
+            playerHero.focusIndex = (playerHero.focusIndex + 1) % focusModesList.length;
+            setFocus(focusModesList[playerHero.focusIndex]);
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (gameState !== 'playing' || playerHero.hp <= 0) return;
+            
+            document.getElementById('focus-menu').classList.remove('show'); 
+            
+            let screenCenterX = canvas.width / 2;
+            let screenCenterY = canvas.height / 2;
+            let targetCamX = playerHero.x;
+            
+            let worldX = (e.clientX - screenCenterX) / zoom + targetCamX;
+            let worldY = (e.clientY - screenCenterY) / zoom + WORLD_HEIGHT / 2;
+            
+            let clickedEntity = null;
+            let minDist = 45; 
+            
+            function checkClick(entity) {
+                if(!entity) return;
+                if (entity === dragon && !dragon.isAlive) return;
+                if (entity !== dragon && entity.hp <= 0) return;
+                
+                let dist = Math.hypot(entity.x - worldX, entity.y - worldY);
+                if(dist < minDist) {
+                    minDist = dist;
+                    clickedEntity = entity;
+                }
+            }
+            
+            if (dragon.isAlive) checkClick(dragon);
+            heroes.forEach(checkClick);
+            minions.forEach(checkClick);
+            towers.forEach(checkClick);
+            checkClick(nexusRed);
+            checkClick(nexusBlue);
+            
+            if (clickedEntity) {
+                if (clickedEntity === dragon) {
+                    setFocus('dragon');
+                } else if (clickedEntity.team !== playerHero.team) {
+                    if (clickedEntity.role) setFocus('heroes');
+                    else if (clickedEntity.emoji === '🤖' || clickedEntity.emoji === '👾') setFocus('minions');
+                    else setFocus('towers_nexus');
+                } else if (clickedEntity.team === playerHero.team && clickedEntity.role === 'support') {
+                    setFocus('escape');
+                    playerHero.customEscapeTarget = 'support';
+                    createEffect(clickedEntity.x, clickedEntity.y, '🏃 Indo ao Sup!');
+                }
+            } else {
+                let isBehind = playerHero.team === 'blue' ? (worldX < playerHero.x - 20) : (worldX > playerHero.x + 20);
+                if (isBehind) {
+                    setFocus('escape');
+                    playerHero.customEscapeTarget = 'nexus';
+                    createEffect(worldX, worldY, '🏃 Recuando ao Nexus!');
+                } else {
+                    setFocus('attack');
+                    createEffect(worldX, worldY, '⚔️ Avançando!');
+                }
+            }
+        });
+
+        let nexusBlue = { x: 300, y: 300, hp: 5000, maxHp: 5000, team: 'blue', range: 150, damage: 45, cd: 0, skillCd: 0, emoji: '🔵' };
+        let nexusRed = { x: 2900, y: 300, hp: 5000, maxHp: 5000, team: 'red', range: 150, damage: 45, cd: 0, skillCd: 0, emoji: '🔴' };
+
+        let dragon = {
+            x: 1600, y: 300, hp: 3000, maxHp: 3000, range: 100, damage: 25,
+            cd: 0, emoji: '🐉', isAlive: false, respawnTimer: 10800,
+            teamBuffs: { blue: 0, red: 0 }, lastAttacker: null
+        };
+
+        function getHeroDmg(hero, baseDmg) {
+            let multi = hero.doubleDmgTimer > 0 ? 2 : 1;
+            let dragonBonus = 1 + (dragon.teamBuffs[hero.team] || 0) * 0.25;
+            return baseDmg * multi * dragonBonus;
+        }
+
+        let towers = [
+            { x: 600, y: 300, hp: 2200, maxHp: 2200, team: 'blue', range: 150, damage: 35, cd: 0, emoji: '🥉' },
+            { x: 900, y: 300, hp: 2200, maxHp: 2200, team: 'blue', range: 150, damage: 35, cd: 0, emoji: '🥈' },
+            { x: 1200, y: 300, hp: 2200, maxHp: 2200, team: 'blue', range: 150, damage: 35, cd: 0, emoji: '🥇' },
+            { x: 2000, y: 300, hp: 2200, maxHp: 2200, team: 'red', range: 150, damage: 35, cd: 0, emoji: '🥇' },
+            { x: 2300, y: 300, hp: 2200, maxHp: 2200, team: 'red', range: 150, damage: 35, cd: 0, emoji: '🥈' },
+            { x: 2600, y: 300, hp: 2200, maxHp: 2200, team: 'red', range: 150, damage: 35, cd: 0, emoji: '🥉' },
+        ];
+
+        let minions = [];
+        let projectiles = [];
+        let effects = [];
+        let shockwaves = [];
+        let trails = [];
+        
+        let heroes = [
+            { id: 'player', name: 'Atirador', role: 'marksman', x: 250, y: 280, hp: 700, maxHp: 700, team: 'blue', range: 100, damage: 25, speed: 1.4, emoji: '🏹', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, buffTimer: 0, ultTimer: 0, doubleDmgTimer: 0, kills: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', customEscapeTarget: null, isDashing: false },
+            { x: 220, y: 320, hp: 1200, maxHp: 1200, team: 'blue', role: 'tank', range: 15, damage: 18, speed: 1.1, emoji: '⚓', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 240, y: 350, hp: 600, maxHp: 600, team: 'blue', role: 'support', range: 50, damage: 12, speed: 1.3, emoji: '💖', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 200, y: 260, hp: 800, maxHp: 800, team: 'blue', role: 'assassin', range: 15, damage: 22, speed: 1.8, emoji: '🔪', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, buffTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 180, y: 340, hp: 550, maxHp: 550, team: 'blue', role: 'mage', range: 75, damage: 20, speed: 1.1, emoji: '🎩', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, buffTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            
+            { x: 2950, y: 280, hp: 700, maxHp: 700, team: 'red', role: 'marksman', range: 100, damage: 25, speed: 1.4, emoji: '🏹', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, buffTimer: 0, ultTimer: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 2980, y: 320, hp: 1200, maxHp: 1200, team: 'red', role: 'tank', range: 15, damage: 18, speed: 1.1, emoji: '⚓', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 2960, y: 350, hp: 600, maxHp: 600, team: 'red', role: 'support', range: 50, damage: 12, speed: 1.3, emoji: '💖', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 3000, y: 260, hp: 800, maxHp: 800, team: 'red', role: 'assassin', range: 15, damage: 22, speed: 1.8, emoji: '🔪', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, buffTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+            { x: 3020, y: 340, hp: 550, maxHp: 550, team: 'red', role: 'mage', range: 75, damage: 20, speed: 1.1, emoji: '🎩', cd: [0,0,0,0,0,0,0], attackCd: 0, stunTimer: 0, buffTimer: 0, skillCd: 0, doubleDmgTimer: 0, deaths: 0, respawnTimer: 0, isDead: false, focusMode: 'attack', isDashing: false },
+        ];
+
+        // Inicializamos para evitar erros na renderização do background do menu
+        let playerHero = heroes[0]; 
+        let spawnTimer = 0;
+
+        function executeFlash(hero, directionMultiplier) {
+            let cdIndex = directionMultiplier < 0 ? 4 : 5;
+            if (hero.cd[cdIndex] > 0 || hero.hp <= 0) return;
+            
+            hero.cd[cdIndex] = 150;
+            let dashDist = 80;
+            let teamDir = hero.team === 'blue' ? 1 : -1;
+            let finalDir = teamDir * directionMultiplier;
+            let startX = hero.x;
+            let startY = hero.y;
+
+            hero.x += dashDist * finalDir;
+            hero.x = Math.max(260, Math.min(2940, hero.x));
+
+            let color = hero.team === 'blue' ? '#58a6ff' : '#f85149';
+            let steps = 12;
+            for (let i = 0; i <= steps; i++) {
+                let interpX = startX + (hero.x - startX) * (i / steps);
+                trails.push({
+                    x: interpX, y: startY,
+                    color: color,
+                    life: 30, maxLife: 30
+                });
+            }
+
+            createEffect(hero.x, hero.y, directionMultiplier > 0 ? '➡️' : '⬅️');
+        }
+
+        // Nova lógica para iniciar o jogo com o herói escolhido
+        function startGame(heroIndex) {
+            document.getElementById('selection-screen').style.display = 'none';
+            gameState = 'playing';
+
+            nexusBlue.hp = nexusBlue.maxHp; nexusBlue.cd = 0; nexusBlue.skillCd = 0;
+            nexusRed.hp = nexusRed.maxHp; nexusRed.cd = 0; nexusRed.skillCd = 0;
+
+            dragon.hp = dragon.maxHp; dragon.cd = 0; dragon.isAlive = false;
+            dragon.respawnTimer = 10800; dragon.teamBuffs = { blue: 0, red: 0 };
+            dragon.lastAttacker = null;
+
+            towers.forEach(t => { t.hp = t.maxHp; t.cd = 0; });
+
+            heroes.forEach(h => {
+                h.hp = h.maxHp;
+                h.x = h.team === 'blue' ? 200 + Math.random()*50 : 2950 + Math.random()*50;
+                h.y = 260 + Math.random()*80;
+                h.cd = [0,0,0,0,0,0,0]; h.attackCd = 0; h.stunTimer = 0; h.buffTimer = 0;
+                h.ultTimer = 0; h.doubleDmgTimer = 0; h.kills = 0; h.deaths = 0; h.respawnTimer = 0;
+                h.isDead = false; h.focusMode = 'attack'; h.isDashing = false; h.customEscapeTarget = null;
+            });
+
+            // Atribui o herói selecionado
+            playerHero = heroes[heroIndex];
+
+            minions = []; projectiles = []; effects = []; shockwaves = []; trails = []; spawnTimer = 0;
+            spawnWave();
+        }
+
+        // Volta para o menu de seleção ao reiniciar
+        function restartGame() {
+            document.getElementById('game-over-screen').style.display = 'none';
+            document.getElementById('selection-screen').style.display = 'flex';
+            gameState = 'selection';
+        }
+        
+        function spawnWave() {
+            for (let i = 0; i < 3; i++) {
+                minions.push({ x: 260 + (i * 20), y: 270 + (i * 30), hp: 150, maxHp: 150, team: 'blue', range: 15, damage: 12, speed: 1.0, emoji: '🤖', attackCd: 0, stunTimer: 0 });
+                minions.push({ x: 2940 - (i * 20), y: 270 + (i * 30), hp: 150, maxHp: 150, team: 'red', range: 15, damage: 12, speed: 1.0, emoji: '👾', attackCd: 0, stunTimer: 0 });
+            }
+        }
+
+        function calculateAllyAvoidance(unit, baseAngle, speed) {
+            let allies = [...heroes.filter(h => h.team === unit.team && h.hp > 0 && h !== unit), ...minions.filter(m => m.team === unit.team && m !== unit)];
+            let steerX = 0;
+            let steerY = 0;
+            let count = 0;
+            let checkDist = 40; 
+
+            for (let ally of allies) {
+                let dist = Math.hypot(ally.x - unit.x, ally.y - unit.y);
+                if (dist > 0 && dist < checkDist) {
+                    let repAngle = Math.atan2(unit.y - ally.y, unit.x - ally.x);
+                    let weight = (checkDist - dist) / checkDist;
+                    steerX += Math.cos(repAngle) * weight * 1.5;
+                    steerY += Math.sin(repAngle) * weight * 1.5;
+                    count++;
+                }
+            }
+
+            if (count > 0) {
+                let targetVx = Math.cos(baseAngle) * speed + steerX;
+                let targetVy = Math.sin(baseAngle) * speed + steerY;
+                let finalAngle = Math.atan2(targetVy, targetVx);
+                return { angle: finalAngle, speed: Math.min(speed * 1.2, Math.hypot(targetVx, targetVy)) };
+            }
+            return { angle: baseAngle, speed: speed };
+        }
+
+        function findTargetByFocus(entity, maxRange) {
+            let enemyTeam = entity.team === 'blue' ? 'red' : 'blue';
+            let candidates = [
+                ...minions.filter(m => m.team === enemyTeam),
+                ...heroes.filter(h => h.team === enemyTeam && h.hp > 0),
+                ...towers.filter(t => t.team === enemyTeam && t.hp > 0)
+            ];
+            
+            if (enemyTeam === 'red' && nexusRed.hp > 0) candidates.push(nexusRed);
+            if (enemyTeam === 'blue' && nexusBlue.hp > 0) candidates.push(nexusBlue);
+            if (dragon.isAlive) candidates.push(dragon);
+
+            let inRange = candidates.filter(c => Math.hypot(c.x - entity.x, c.y - entity.y) <= maxRange);
+            if (inRange.length > 0) {
+                inRange.sort((a, b) => Math.hypot(a.x - entity.x, a.y - entity.y) - Math.hypot(b.x - entity.x, b.y - entity.y));
+                return inRange[0];
+            }
+            return null;
+        }
+
+        function startDash(hero, target, damage, speed, type, hitEmoji) {
+            hero.isDashing = true;
+            hero.dashData = {
+                tx: target.x, ty: target.y,
+                target: target,
+                damage: damage, speed: speed, type: type, hitEmoji: hitEmoji,
+                bounces: type === 'ricochet' ? 5 : 0,
+                hitTargets: []
+            };
+        }
+
+        function castHeroSkill(hero, index, target) {
+            let dmgMultiplier = hero.doubleDmgTimer > 0 ? 2 : 1;
+            let dragonBonus = 1 + (dragon.teamBuffs[hero.team] || 0) * 0.25;
+            let isMelee = (hero.role === 'tank' || hero.role === 'assassin');
+            let projBaseEmoji = dmgMultiplier > 1 ? '🔥' : (isMelee ? '💨' : '⚡️');
+
+            if (index === 0 && hero.cd[0] <= 0) {
+                hero.cd[0] = 300;
+                hero.buffTimer = 180;
+                if (hero.ultTimer > 0) {
+                    dmgMultiplier *= 2;
+                    createEffect(hero.x, hero.y, '⚡🌟 ');
+                }
+
+                if (target) {
+                    let damage = 40 * dmgMultiplier * dragonBonus;
+                    if (isMelee) {
+                        startDash(hero, target, damage, 10, 'normal', '💥');
+                    } else {
+                        projectiles.push({
+                            x: hero.x, y: hero.y, tx: target.x, ty: target.y,
+                            target: target, damage: damage, speed: 8,
+                            emoji: projBaseEmoji, hitEmoji: '💥', type: 'normal', source: hero
+                        });
+                    }
+                }
+                createEffect(hero.x, hero.y, isMelee ? '💨' : '⚡');
+            } else if (index === 1 && hero.cd[1] <= 0) {
+                hero.cd[1] = 360;
+                if (target) {
+                    let damage = 30 * dmgMultiplier * dragonBonus;
+                    if (isMelee) {
+                        startDash(hero, target, damage, 9, 'stun', '💥');
+                    } else {
+                        projectiles.push({
+                            x: hero.x, y: hero.y, tx: target.x, ty: target.y,
+                            target: target, damage: damage, speed: 7,
+                            emoji: dmgMultiplier > 1 ? '🔥' : '💫', hitEmoji: '💥', type: 'stun', source: hero
+                        });
+                    }
+                }
+                createEffect(hero.x, hero.y, '💫');
+            } else if (index === 2 && hero.cd[2] <= 0) {
+                hero.cd[2] = 450;
+                if (target) {
+                    let damage = 90 * dmgMultiplier * dragonBonus;
+                    if (isMelee) {
+                        startDash(hero, target, damage, 12, 'ricochet', '💥');
+                    } else {
+                        projectiles.push({
+                            x: hero.x, y: hero.y, tx: target.x, ty: target.y,
+                            target: target, damage: damage, speed: 7.5,
+                            emoji: dmgMultiplier > 1 ? '🔥' : '💥', hitEmoji: '💥', type: 'ricochet', team: hero.team, bounces: 5, hitTargets: [], source: hero
+                        });
+                    }
+                }
+                createEffect(hero.x, hero.y, isMelee ? '⚔️' : '💥');
+            } else if (index === 3 && hero.cd[3] <= 0) {
+                hero.cd[3] = 1800; // Recarga de 1800 frames a 60 fps = exatos 30 SEGUNDOS.
+                hero.ultTimer = 540;
+                if (hero.buffTimer > 0) {
+                    hero.cd[0] = 0;
+                    createEffect(hero.x, hero.y, '🌟⚡');
+                }
+                createEffect(hero.x, hero.y, '🌟');
+            } else if (index === 6 && hero.cd[6] <= 0) {
+                hero.cd[6] = 600;
+                hero.doubleDmgTimer = 300;
+                createEffect(hero.x, hero.y, '🔥');
+            }
+        }
+
+        function useSkill(index) {
+            if (gameState !== 'playing' || playerHero.hp <= 0) return;
+            let skillRange = Math.max(playerHero.range + 15, 250); 
+            let target = findTargetByFocus(playerHero, skillRange);
+            castHeroSkill(playerHero, index, target);
+        }
+
+        function createEffect(x, y, emoji) {
+            effects.push({ x, y, emoji, life: 35 });
+        }
+
+        function applyKnockback(attacker, target, force = 10) {
+            if (towers.includes(target) || target === nexusBlue || target === nexusRed || target === dragon) return;
+
+            let angle = Math.atan2(target.y - attacker.y, target.x - attacker.x);
+            target.x += Math.cos(angle) * force;
+            target.y += Math.sin(angle) * force;
+            target.y = Math.max(165, Math.min(435, target.y));
+            target.x = Math.max(260, Math.min(2940, target.x));
+        }
+
+        function findNearestEnemy(entity, maxRange) {
+            let enemies = [];
+            if (entity.team === 'blue') {
+                enemies = [...minions.filter(m => m.team === 'red'), ...heroes.filter(h => h.team === 'red' && h.hp > 0), ...towers.filter(t => t.team === 'red' && t.hp > 0)];
+                if (nexusRed.hp > 0) enemies.push(nexusRed);
+            } else {
+                enemies = [...minions.filter(m => m.team === 'blue'), ...heroes.filter(h => h.team === 'blue' && h.hp > 0), ...towers.filter(t => t.team === 'blue' && t.hp > 0)];
+                if (nexusBlue.hp > 0) enemies.push(nexusBlue);
+            }
+
+            let nearest = null;
+            let minDist = maxRange;
+            for (let e of enemies) {
+                let dist = Math.hypot(e.x - entity.x, e.y - entity.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = e;
+                }
+            }
+            return nearest;
+        }
+
+        function updateAI() {
+            if (gameState !== 'playing') return;
+
+            spawnTimer++;
+            if (spawnTimer > 320) {
+                spawnWave();
+                spawnTimer = 0;
+            }
+
+            if (!dragon.isAlive) {
+                dragon.respawnTimer--;
+                if (dragon.respawnTimer <= 0) {
+                    dragon.isAlive = true;
+                    dragon.hp = dragon.maxHp;
+                    dragon.cd = 0;
+                    dragon.lastAttacker = null;
+                    createEffect(dragon.x, dragon.y, '🐉 O Dragão surgiu no centro da rota!');
+                }
+            } else {
+                let dragonTargets = heroes.filter(h => h.hp > 0 && Math.hypot(h.x - dragon.x, h.y - dragon.y) <= dragon.range);
+
+                dragon.cd++;
+                if (dragon.cd > 55 && dragonTargets.length > 0) {
+                    dragonTargets.sort((a, b) => Math.hypot(a.x - dragon.x, a.y - dragon.y) - Math.hypot(b.x - dragon.x, b.y - dragon.y));
+                    let firingTargets = dragonTargets.slice(0, 10);
+                    
+                    firingTargets.forEach(t => {
+                        projectiles.push({
+                            x: dragon.x, y: dragon.y,
+                            tx: t.x, ty: t.y,
+                            target: t, damage: dragon.damage, speed: 6,
+                            emoji: '🔥', hitEmoji: '💥', type: 'normal'
+                        });
+                    });
+                    dragon.cd = 0;
+                }
+
+                heroes.forEach(h => {
+                    if (h.hp <= 0 || h.stunTimer > 0) return;
+                    let distToDragon = Math.hypot(dragon.x - h.x, dragon.y - h.y);
+                    if (distToDragon <= h.range + 15 && (h.focusMode === 'dragon' || h.focusMode === 'attack')) {
+                        h.attackCd = (h.attackCd || 0) + 1;
+                        if (h.attackCd > 45) {
+                            let finalDmg = getHeroDmg(h, h.damage);
+                            dragon.hp -= finalDmg;
+                            dragon.lastAttacker = h;
+                            createEffect(dragon.x, dragon.y, '⚔️');
+
+                            if (dragon.hp <= 0) {
+                                dragon.isAlive = false;
+                                dragon.respawnTimer = 10800;
+                                let winningTeam = h.team;
+                                dragon.teamBuffs[winningTeam]++;
+                                createEffect(dragon.x, dragon.y, `🐉 Dragão do Time ${winningTeam === 'blue' ? 'Azul' : 'Vermelho'} abatido! (+25% Dano)`);
+                            }
+                            h.attackCd = 0;
+                        }
+                    }
+                });
+            }
+
+            heroes.forEach(h => {
+                if (h.cd) {
+                    for (let i = 0; i < h.cd.length; i++) {
+                        if (h.cd[i] > 0) h.cd[i]--;
+                    }
+                }
+                if (h.doubleDmgTimer > 0) h.doubleDmgTimer--;
+            });
+
+            projectiles.forEach((p, index) => {
+                let targetX = p.target && p.target.hp > 0 ? p.target.x : p.tx;
+                let targetY = p.target && p.target.hp > 0 ? p.target.y : p.ty;
+                
+                let angle = Math.atan2(targetY - p.y, targetX - p.x);
+                p.x += Math.cos(angle) * p.speed;
+                p.y += Math.sin(angle) * p.speed;
+
+                if (Math.hypot(targetX - p.x, targetY - p.y) < 18) {
+                    if (p.type === 'stun' && p.target && p.target.hp > 0) {
+                        p.target.hp -= p.damage;
+                        if (p.source) p.target.lastAttacker = p.source;
+                        p.target.stunTimer = 120;
+                        createEffect(p.target.x, p.target.y, '💫');
+                        projectiles.splice(index, 1);
+                    } else if (p.type === 'ricochet') {
+                        if (!p.hitTargets) p.hitTargets = [];
+                        if (p.target && !p.hitTargets.includes(p.target)) {
+                            p.target.hp -= p.damage;
+                            if (p.source) p.target.lastAttacker = p.source;
+                            createEffect(p.target.x, p.target.y, p.hitEmoji || '💥');
+                            p.hitTargets.push(p.target);
+                        }
+                        
+                        p.bounces--;
+                        if (p.bounces > 0) {
+                            let enemyTeam = p.team === 'blue' ? 'red' : 'blue';
+                            let enemies = [...minions, ...heroes, ...towers].filter(e => e.team === enemyTeam && e.hp > 0 && !p.hitTargets.includes(e));
+                            let nextTarget = null;
+                            let minDist = 220; 
+                            for (let e of enemies) {
+                                let dist = Math.hypot(e.x - p.x, e.y - p.y);
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    nextTarget = e;
+                                }
+                            }
+                            if (nextTarget) {
+                                p.target = nextTarget;
+                                p.tx = nextTarget.x;
+                                p.ty = nextTarget.y;
+                            } else {
+                                projectiles.splice(index, 1);
+                            }
+                        } else {
+                            projectiles.splice(index, 1);
+                        }
+                    } else if (p.target && p.target.hp > 0) {
+                        p.target.hp -= p.damage;
+                        if (p.source) p.target.lastAttacker = p.source;
+                        createEffect(p.target.x, p.target.y, p.hitEmoji || '💥');
+                        projectiles.splice(index, 1);
+                    } else {
+                        projectiles.splice(index, 1);
+                    }
+                }
+            });
+
+            shockwaves.forEach((sw, index) => {
+                sw.radius += (sw.maxRadius - sw.radius) * 0.2;
+                sw.life--;
+                if (sw.life <= 0) shockwaves.splice(index, 1);
+            });
+
+            trails.forEach((tr, index) => {
+                tr.life--;
+                if (tr.life <= 0) trails.splice(index, 1);
+            });
+
+            let allUnits = [...heroes.filter(h => h.hp > 0), ...minions];
+            for (let i = 0; i < allUnits.length; i++) {
+                for (let j = i + 1; j < allUnits.length; j++) {
+                    let u1 = allUnits[i];
+                    let u2 = allUnits[j];
+                    if (u1.team !== u2.team) {
+                        let dist = Math.hypot(u2.x - u1.x, u2.y - u1.y);
+                        let minDist = (u1.role === 'tank' || u2.role === 'tank') ? 32 : 26;
+                        if (dist < minDist && dist > 0) {
+                            let overlap = (minDist - dist) / 2;
+                            let angle = Math.atan2(u2.y - u1.y, u2.x - u1.x);
+                            u1.x -= Math.cos(angle) * overlap;
+                            u1.y -= Math.sin(angle) * overlap;
+                            u2.x += Math.cos(angle) * overlap;
+                            u2.y += Math.sin(angle) * overlap;
+                            u1.y = Math.max(165, Math.min(435, u1.y));
+                            u2.y = Math.max(165, Math.min(435, u2.y));
+                            u1.x = Math.max(260, Math.min(2940, u1.x));
+                            u2.x = Math.max(260, Math.min(2940, u2.x));
+                        }
+                    }
+                }
+            }
+
+            allUnits.forEach(u => {
+                if (u.stunTimer > 0) u.stunTimer--;
+                if (u.buffTimer > 0) u.buffTimer--;
+                if (u.ultTimer > 0) u.ultTimer--;
+            });
+
+            minions.forEach(m => {
+                if (m.stunTimer > 0) return;
+                
+                let attackTarget = findNearestEnemy(m, m.range + 10);
+                if (attackTarget) {
+                    m.attackCd = (m.attackCd || 0) + 1;
+                    if (m.attackCd > 45) {
+                        attackTarget.hp -= m.damage;
+                        createEffect(attackTarget.x, attackTarget.y, '💥');
+                        applyKnockback(m, attackTarget, 5);
+                        m.attackCd = 0;
+                    }
+                } else {
+                    let aggroTarget = findNearestEnemy(m, 220);
+                    let baseAngle;
+                    if (aggroTarget) {
+                        baseAngle = Math.atan2(aggroTarget.y - m.y, aggroTarget.x - m.x);
+                    } else {
+                        let dir = m.team === 'blue' ? 1 : -1;
+                        let targetX = m.x + dir * 100;
+                        let targetY = 300;
+                        baseAngle = Math.atan2(targetY - m.y, targetX - m.x);
+                    }
+                    let steered = calculateAllyAvoidance(m, baseAngle, m.speed);
+                    m.x += Math.cos(steered.angle) * steered.speed;
+                    m.y += Math.sin(steered.angle) * steered.speed;
+                }
+                m.y = Math.max(165, Math.min(435, m.y));
+                m.x = Math.max(260, Math.min(2940, m.x));
+            });
+
+            towers.forEach(t => {
+                if (t.hp <= 0) return;
+                let target = findNearestEnemy(t, t.range);
+                if (target) {
+                    t.cd++;
+                    if (t.cd > 55) {
+                        projectiles.push({
+                            x: t.x, y: t.y,
+                            tx: target.x, ty: target.y,
+                            target: target, damage: t.damage, speed: 5.5,
+                            emoji: '⚪', hitEmoji: '💥', type: 'normal'
+                        });
+                        t.cd = 0;
+                    }
+                }
+            });
+
+            [nexusBlue, nexusRed].forEach(n => {
+                if (n.hp <= 0) return;
+                let target = findNearestEnemy(n, n.range);
+                if (target) {
+                    n.cd++;
+                    if (n.cd > 55) {
+                        projectiles.push({
+                            x: n.x, y: n.y,
+                            tx: target.x, ty: target.y,
+                            target: target, damage: n.damage, speed: 5.5,
+                            emoji: n.team === 'blue' ? '🔵' : '🔴', hitEmoji: '💥', type: 'normal'
+                        });
+                        n.cd = 0;
+                    }
+                }
+
+                n.skillCd = (n.skillCd || 0) + 1;
+                let supportRadius = 100;
+                if (n.skillCd > 300) {
+                    let alliesNeedingHeal = heroes.filter(e => e.team === n.team && e.hp < e.maxHp * 0.9 && e.hp > 0 && Math.hypot(e.x - n.x, e.y - n.y) < supportRadius);
+                    if (alliesNeedingHeal.length > 0) {
+                        alliesNeedingHeal.forEach(e => {
+                            e.hp = Math.min(e.maxHp, e.hp + 180);
+                            createEffect(e.x, e.y, '💖 +180');
+                        });
+                        shockwaves.push({
+                            x: n.x, y: n.y, radius: 10, maxRadius: supportRadius, life: 25, maxLife: 25,
+                            color: n.team === 'blue' ? '#58a6ff' : '#f85149'
+                        });
+                        createEffect(n.x, n.y, '💖 Cura do Nexus!');
+                        n.skillCd = 0;
+                    }
+                }
+            });
+
+            heroes.forEach(h => {
+                if (h.hp <= 0) {
+                    if (!h.isDead) {
+                        h.deaths = (h.deaths || 0) + 1;
+                        h.isDead = true;
+                        h.respawnTimer = 0;
+
+                        if (h.lastAttacker === playerHero && h.team !== playerHero.team) {
+                            playerHero.kills = (playerHero.kills || 0) + 1;
+                        }
+                    }
+                    h.respawnTimer++;
+                    let requiredRespawnTime = h.deaths * 180; 
+                    if (h.respawnTimer > requiredRespawnTime) {
+                        h.hp = h.maxHp;
+                        h.x = h.team === 'blue' ? 220 : 2980;
+                        h.y = 300;
+                        h.respawnTimer = 0;
+                        h.isDead = false;
+                        h.isDashing = false;
+                    }
+                    return;
+                }
+
+                if (h.stunTimer > 0) {
+                    h.isDashing = false;
+                    return;
+                }
+
+                if (h.isDashing && h.dashData) {
+                    let d = h.dashData;
+                    let targetX = d.target && d.target.hp > 0 ? d.target.x : d.tx;
+                    let targetY = d.target && d.target.hp > 0 ? d.target.y : d.ty;
+                    
+                    let angle = Math.atan2(targetY - h.y, targetX - h.x);
+                    h.x += Math.cos(angle) * d.speed;
+                    h.y += Math.sin(angle) * d.speed;
+
+                    trails.push({
+                        x: h.x, y: h.y,
+                        color: h.team === 'blue' ? '#58a6ff' : '#f85149',
+                        life: 15, maxLife: 15
+                    });
+
+                    if (Math.hypot(targetX - h.x, targetY - h.y) < 25) {
+                        if (d.type === 'stun' && d.target && d.target.hp > 0) {
+                            d.target.hp -= d.damage;
+                            d.target.lastAttacker = h;
+                            d.target.stunTimer = 120;
+                            createEffect(d.target.x, d.target.y, '💫');
+                            h.isDashing = false;
+                        } else if (d.type === 'ricochet') {
+                            if (d.target && !d.hitTargets.includes(d.target)) {
+                                d.target.hp -= d.damage;
+                                d.target.lastAttacker = h;
+                                createEffect(d.target.x, d.target.y, d.hitEmoji || '💥');
+                                d.hitTargets.push(d.target);
+                            }
+                            
+                            d.bounces--;
+                            if (d.bounces > 0) {
+                                let enemyTeam = h.team === 'blue' ? 'red' : 'blue';
+                                let enemies = [...minions, ...heroes, ...towers].filter(e => e.team === enemyTeam && e.hp > 0 && !d.hitTargets.includes(e));
+                                let nextTarget = null;
+                                let minDist = 300; 
+                                for (let e of enemies) {
+                                    let dist = Math.hypot(e.x - h.x, e.y - h.y);
+                                    if (dist < minDist) {
+                                        minDist = dist;
+                                        nextTarget = e;
+                                    }
+                                }
+                                if (nextTarget) {
+                                    d.target = nextTarget;
+                                    d.tx = nextTarget.x;
+                                    d.ty = nextTarget.y;
+                                } else {
+                                    h.isDashing = false;
+                                }
+                            } else {
+                                h.isDashing = false;
+                            }
+                        } else if (d.target && d.target.hp > 0) {
+                            d.target.hp -= d.damage;
+                            d.target.lastAttacker = h;
+                            createEffect(d.target.x, d.target.y, d.hitEmoji || '💥');
+                            h.isDashing = false;
+                        } else {
+                            h.isDashing = false;
+                        }
+                    }
+                    
+                    h.y = Math.max(165, Math.min(435, h.y));
+                    h.x = Math.max(260, Math.min(2940, h.x));
+                    return; 
+                }
+
+                if (h !== playerHero) {
+                    let enemyHeroesNear = heroes.filter(he => he.team !== h.team && he.hp > 0 && Math.hypot(he.x - h.x, he.y - h.y) <= 350);
+                    let dragonNear = dragon.isAlive && Math.hypot(dragon.x - h.x, dragon.y - h.y) <= 400;
+                    let towerNear = [...towers, h.team === 'blue' ? nexusRed : nexusBlue].filter(t => t.team !== h.team && t.hp > 0 && Math.hypot(t.x - h.x, t.y - h.y) <= 300);
+                    let minionsNear = minions.filter(m => m.team !== h.team && Math.hypot(m.x - h.x, m.y - h.y) <= 250);
+
+                    if (h.hp < h.maxHp * 0.35) {
+                        h.focusMode = 'escape';
+                    } else if (dragonNear && (h.role === 'marksman' || Math.random() < 0.25)) {
+                        h.focusMode = 'dragon';
+                    } else if (enemyHeroesNear.length > 0) {
+                        h.focusMode = 'heroes';
+                    } else if (towerNear.length > 0 && enemyHeroesNear.length === 0) {
+                        h.focusMode = 'towers_nexus';
+                    } else if (minionsNear.length > 0 && Math.random() < 0.4) {
+                        h.focusMode = 'minions';
+                    } else {
+                        h.focusMode = 'attack';
+                    }
+                }
+
+                if (h !== playerHero) {
+                    let nearestEnemy = findNearestEnemy(h, 350);
+                    if (nearestEnemy) {
+                        let distToEnemy = Math.hypot(nearestEnemy.x - h.x, nearestEnemy.y - h.y);
+                        if (h.cd[4] <= 0 && h.hp < h.maxHp * 0.35 && distToEnemy < 220) {
+                            executeFlash(h, -1);
+                        } else if (h.cd[5] <= 0 && (h.role === 'assassin' || h.role === 'tank' || h.role === 'marksman') && distToEnemy > 120 && distToEnemy < 300 && nearestEnemy.hp < h.maxHp * 0.8) {
+                            executeFlash(h, 1);
+                        }
+                        if (h.cd[6] <= 0 && distToEnemy < 250) {
+                            h.cd[6] = 600;
+                            h.doubleDmgTimer = 300;
+                            createEffect(h.x, h.y, '🔥');
+                        }
+                    }
+                }
+
+                if (h !== playerHero) {
+                    let skillRange = Math.max(h.range + 15, 250); 
+                    let target = findTargetByFocus(h, skillRange);
+                    if (target) {
+                        if (h.cd[3] <= 0) castHeroSkill(h, 3, target);
+                        else if (h.cd[0] <= 0) castHeroSkill(h, 0, target);
+                        else if (h.cd[1] <= 0) castHeroSkill(h, 1, target);
+                        else if (h.cd[2] <= 0) castHeroSkill(h, 2, target);
+                    }
+                }
+
+                if (h.role === 'tank') {
+                    let enemyNear = findNearestEnemy(h, 160);
+                    if (enemyNear) {
+                        h.skillCd = (h.skillCd || 0) + 1;
+                        if (h.skillCd > 600) {
+                            let tankRadius = 75;
+                            let enemies = [...minions, ...heroes].filter(e => e.team !== h.team && e.hp > 0);
+                            let nearby = enemies.filter(e => Math.hypot(e.x - h.x, e.y - h.y) < tankRadius);
+                            if (nearby.length > 0) {
+                                nearby.forEach(e => {
+                                    e.hp -= getHeroDmg(h, 40);
+                                    if (h === playerHero) e.lastAttacker = playerHero;
+                                    e.stunTimer = 90;
+                                    let angle = Math.atan2(e.y - h.y, e.x - h.x);
+                                    e.x = h.x + Math.cos(angle) * (tankRadius + 15);
+                                    e.y = h.y + Math.sin(angle) * (tankRadius + 15);
+                                    e.y = Math.max(165, Math.min(435, e.y));
+                                    e.x = Math.max(260, Math.min(2940, e.x));
+                                });
+                                shockwaves.push({
+                                    x: h.x, y: h.y, radius: 10, maxRadius: tankRadius, life: 25, maxLife: 25,
+                                    color: h.team === 'blue' ? '#58a6ff' : '#f85149'
+                                });
+                                createEffect(h.x, h.y, '⚓ Impacto!');
+                                h.skillCd = 0;
+                            }
+                        }
+                    }
+                }
+
+                if (h.role === 'support') {
+                    h.skillCd = (h.skillCd || 0) + 1;
+                    let supportRadius = 100;
+                    let supportNeedsHeal = h.hp < h.maxHp * 0.9;
+                    let alliesNeedingHeal = heroes.filter(e => e.team === h.team && e.hp < e.maxHp * 0.9 && e.hp > 0);
+                    let nearbyAllies = alliesNeedingHeal.filter(e => Math.hypot(e.x - h.x, e.y - h.y) < supportRadius);
+                    
+                    if ((supportNeedsHeal || nearbyAllies.length > 0) && h.skillCd > 600) {
+                        let targetsToHeal = heroes.filter(e => e.team === h.team && e.hp > 0 && Math.hypot(e.x - h.x, e.y - h.y) < supportRadius);
+                        if (targetsToHeal.length > 0) {
+                            targetsToHeal.forEach(e => {
+                                e.hp = Math.min(e.maxHp, e.hp + 180);
+                                createEffect(e.x, e.y, '💖 +180');
+                            });
+                            shockwaves.push({
+                                x: h.x, y: h.y, radius: 10, maxRadius: supportRadius, life: 25, maxLife: 25,
+                                color: h.team === 'blue' ? '#58a6ff' : '#f85149'
+                            });
+                            createEffect(h.x, h.y, '💖');
+                            h.skillCd = 0;
+                        }
+                    }
+                }
+
+                if (h.role === 'assassin') {
+                    h.skillCd = (h.skillCd || 0) + 1;
+                    let enemyNear = findNearestEnemy(h, 250);
+                    if (enemyNear && h.skillCd > 600 && h.buffTimer <= 0) {
+                        h.buffTimer = 300;
+                        h.skillCd = 0;
+                        createEffect(h.x, h.y, '🔪');
+                    }
+                    if (h.buffTimer > 0) {
+                        trails.push({
+                            x: h.x, y: h.y,
+                            color: h.team === 'blue' ? '#58a6ff' : '#f85149',
+                            life: 18, maxLife: 18
+                        });
+                    }
+                }
+
+                if (h.role === 'mage') {
+                    h.skillCd = (h.skillCd || 0) + 1;
+                    let enemyNear = findNearestEnemy(h, 300);
+                    if (enemyNear && h.skillCd > 600 && h.buffTimer <= 0) {
+                        h.buffTimer = 300;
+                        h.skillCd = 0;
+                        createEffect(h.x, h.y, '🎩');
+                    }
+                }
+
+                let target = findTargetByFocus(h, h.range + 15);
+                if (target) {
+                    let attackSpeedFactor = (h.ultTimer > 0 || h.buffTimer > 0) ? 3 : 1;
+                    h.attackCd = (h.attackCd || 0) + attackSpeedFactor;
+
+                    if (h.attackCd > 50) {
+                        if (h.role === 'marksman') {
+                            if (h.ultTimer > 0) {
+                                let enemyTeam = h.team === 'blue' ? 'red' : 'blue';
+                                let possibleEnemies = [...minions.filter(m => m.team === enemyTeam), ...heroes.filter(he => he.team === enemyTeam && he.hp > 0), ...towers.filter(t => t.team === enemyTeam && t.hp > 0)];
+                                let inRangeEnemies = possibleEnemies.filter(e => Math.hypot(e.x - h.x, e.y - h.y) <= h.range + 15);
+                                inRangeEnemies.sort((a,b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y));
+                                let targets = inRangeEnemies.slice(0, 3);
+                                targets.forEach(t => {
+                                    let projEmoji = h.doubleDmgTimer > 0 ? '🔥' : '🌟';
+                                    projectiles.push({
+                                        x: h.x, y: h.y, tx: t.x, ty: t.y,
+                                        target: t, damage: getHeroDmg(h, h.damage + 5), speed: 7,
+                                        emoji: projEmoji, hitEmoji: '💥', type: 'normal',
+                                        source: h
+                                    });
+                                });
+                            } else {
+                                let projEmoji = h.doubleDmgTimer > 0 ? '🔥' : (h.buffTimer > 0 ? '⚡' : (h.team === 'blue' ? '🔵' : '🔴'));
+                                projectiles.push({
+                                    x: h.x, y: h.y, tx: target.x, ty: target.y,
+                                    target: target, damage: getHeroDmg(h, h.damage), speed: 6.5,
+                                    emoji: projEmoji, hitEmoji: '💥', type: 'normal',
+                                    source: h
+                                });
+                            }
+                        } else if (h.role === 'mage' || h.role === 'support') {
+                            let finalDmg = getHeroDmg(h, h.damage);
+                            let mageProjEmoji = h.doubleDmgTimer > 0 ? '🔥' : (h.buffTimer > 0 ? '✨' : (h.team === 'blue' ? '🔵' : '🔴'));
+                            projectiles.push({
+                                x: h.x, y: h.y, tx: target.x, ty: target.y,
+                                target: target, damage: finalDmg, speed: 6.5,
+                                emoji: mageProjEmoji,
+                                hitEmoji: '💥', type: 'normal',
+                                source: h
+                            });
+                        } else {
+                            target.hp -= getHeroDmg(h, h.damage);
+                            if (h === playerHero) target.lastAttacker = playerHero;
+                            createEffect(target.x, target.y, h.doubleDmgTimer > 0 ? '🔥' : '💥');
+                            if (h.role === 'tank') applyKnockback(h, target, 12);
+                        }
+                        h.attackCd = 0;
+                    }
+                }
+
+                let shouldMove = (h.focusMode === 'escape') || (!target);
+                if (shouldMove) {
+                    let possibleTargets = [];
+                    let enemyTeam = h.team === 'blue' ? 'red' : 'blue';
+                    let baseAngle;
+
+                    if (h.focusMode === 'escape') {
+                        let ownNexus = h.team === 'blue' ? nexusBlue : nexusRed;
+                        let ownSupport = heroes.find(he => he.team === h.team && he.role === 'support' && !he.isDead && he.hp > 0);
+                        let escapeTarget = ownNexus;
+                        
+                        if (h === playerHero && h.customEscapeTarget === 'support' && ownSupport) {
+                            escapeTarget = ownSupport;
+                        } else if (h === playerHero && h.customEscapeTarget === 'nexus') {
+                            escapeTarget = ownNexus;
+                        } else {
+                            if (h.hp < h.maxHp * 0.25) {
+                                escapeTarget = ownNexus;
+                            } else {
+                                if (ownSupport) {
+                                    escapeTarget = ownSupport;
+                                } else {
+                                    escapeTarget = ownNexus;
+                                }
+                            }
+                        }
+                        baseAngle = Math.atan2(escapeTarget.y - h.y, escapeTarget.x - h.x);
+                    } else if (h.focusMode === 'attack') {
+                        let allPotentialEnemies = [
+                            ...minions.filter(m => m.team === enemyTeam),
+                            ...heroes.filter(he => he.team === enemyTeam && he.hp > 0),
+                            ...towers.filter(t => t.team === enemyTeam && t.hp > 0),
+                            enemyTeam === 'red' ? nexusRed : nexusBlue
+                        ];
+                        if (dragon.isAlive) allPotentialEnemies.push(dragon);
+
+                        if (allPotentialEnemies.length > 0) {
+                            allPotentialEnemies.sort((a,b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y));
+                            let moveTarget = allPotentialEnemies[0];
+                            baseAngle = Math.atan2(moveTarget.y - h.y, moveTarget.x - h.x);
+                        } else {
+                            let dir = h.team === 'blue' ? 1 : -1;
+                            let targetX = h.x + dir * 100;
+                            let targetY = 300;
+                            baseAngle = Math.atan2(targetY - h.y, targetX - h.x);
+                        }
+                    } else {
+                        if (h.focusMode === 'minions') possibleTargets = minions.filter(m => m.team === enemyTeam);
+                        else if (h.focusMode === 'heroes') possibleTargets = heroes.filter(he => he.team === enemyTeam && he.hp > 0);
+                        else if (h.focusMode === 'towers_nexus') possibleTargets = [...towers.filter(t => t.team === enemyTeam && t.hp > 0), enemyTeam === 'red' ? nexusRed : nexusBlue];
+                        else if (h.focusMode === 'dragon' && dragon.isAlive) possibleTargets = [dragon];
+
+                        let moveTarget = null;
+                        if (possibleTargets.length > 0) {
+                            possibleTargets.sort((a,b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y));
+                            moveTarget = possibleTargets[0];
+                        }
+
+                        if (moveTarget) {
+                            baseAngle = Math.atan2(moveTarget.y - h.y, moveTarget.x - h.x);
+                        } else {
+                            let dir = h.team === 'blue' ? 1 : -1;
+                            let targetX = h.x + dir * 100;
+                            let targetY = 300;
+                            baseAngle = Math.atan2(targetY - h.y, targetX - h.x);
+                        }
+                    }
+
+                    let currentSpeed = h.speed * (h.buffTimer > 0 ? 1.5 : (h.focusMode === 'escape' ? 1.2 : 0.9));
+                    let steered = calculateAllyAvoidance(h, baseAngle, currentSpeed);
+                    h.x += Math.cos(steered.angle) * steered.speed;
+                    h.y += Math.sin(steered.angle) * steered.speed;
+                }
+
+                h.y = Math.max(165, Math.min(435, h.y));
+                h.x = Math.max(260, Math.min(2940, h.x));
+            });
+
+            minions = minions.filter(m => m.hp > 0);
+
+            if (nexusRed.hp <= 0) gameState = 'blue_win';
+            if (nexusBlue.hp <= 0) gameState = 'red_win';
+
+            document.getElementById('blue-score').innerText = `${Math.max(0, Math.floor((nexusBlue.hp / nexusBlue.maxHp) * 100))}%`;
+            document.getElementById('red-score').innerText = `${Math.max(0, Math.floor((nexusRed.hp / nexusRed.maxHp) * 100))}%`;
+            document.getElementById('player-kills').innerText = playerHero.kills || 0;
+            document.getElementById('player-deaths').innerText = playerHero.deaths || 0;
+
+            let timerSeconds = Math.ceil(dragon.respawnTimer / 60);
+            let mins = Math.floor(timerSeconds / 60);
+            let secs = timerSeconds % 60;
+            document.getElementById('dragon-timer').innerText = dragon.isAlive ? "VIVO NA ROTA!" : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            document.getElementById('blue-dragons').innerText = dragon.teamBuffs.blue;
+            document.getElementById('red-dragons').innerText = dragon.teamBuffs.red;
+
+            for (let i = 0; i <= 6; i++) {
+                let cdEl = document.getElementById(`cd-${i}`);
+                if (cdEl) {
+                    if (playerHero.cd[i] > 0) {
+                        cdEl.innerText = Math.ceil(playerHero.cd[i] / 60) + 's';
+                    } else if (i === 6 && playerHero.doubleDmgTimer > 0) {
+                        cdEl.innerText = Math.ceil(playerHero.doubleDmgTimer / 60) + 's';
+                    } else {
+                        cdEl.innerText = 'Pronto';
+                    }
+                }
+            }
+        }
+
+        function drawHpBar(x, y, hp, maxHp, width = 45, team = 'blue') {
+            if (hp <= 0 || hp >= maxHp) return;
+            ctx.fillStyle = '#21262d';
+            ctx.fillRect(x - width / 2, y - 22, width, 5);
+            
+            ctx.fillStyle = team === 'blue' ? '#2ea043' : (team === 'neutral' ? '#f1c40f' : '#f85149');
+            let pct = Math.max(0, hp / maxHp);
+            ctx.fillRect(x - width / 2, y - 22, width * pct, 5);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+
+            let screenCenterX = canvas.width / 2;
+            let screenCenterY = canvas.height / 2;
+
+            let targetCamX;
+            if (playerHero.hp > 0) {
+                lockedCameraX = null;
+                targetCamX = playerHero.x;
+            } else {
+                if (lockedCameraX === null) lockedCameraX = playerHero.x;
+                targetCamX = lockedCameraX;
+            }
+
+            cameraX = targetCamX - screenCenterX / zoom;
+            cameraX = Math.max(0, Math.min(WORLD_WIDTH - canvas.width / zoom, cameraX));
+
+            ctx.translate(screenCenterX, screenCenterY);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-targetCamX, -WORLD_HEIGHT / 2);
+
+            ctx.fillStyle = '#161b22';
+            ctx.fillRect(0, 150, WORLD_WIDTH, 300);
+
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 150); ctx.lineTo(WORLD_WIDTH, 150);
+            ctx.moveTo(0, 450); ctx.lineTo(WORLD_WIDTH, 450);
+            ctx.stroke();
+
+            trails.forEach(tr => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(tr.x, tr.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = tr.color;
+                ctx.globalAlpha = tr.life / tr.maxLife * 0.5;
+                ctx.fill();
+                ctx.restore();
+            });
+
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = sw.color;
+                ctx.globalAlpha = sw.life / sw.maxLife;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.fillStyle = sw.color;
+                ctx.globalAlpha = (sw.life / sw.maxLife) * 0.25;
+                ctx.fill();
+                ctx.restore();
+            });
+
+            if (dragon.isAlive) {
+                ctx.font = '100px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(dragon.emoji, dragon.x, dragon.y + 25);
+                drawHpBar(dragon.x, dragon.y, dragon.hp, dragon.maxHp, 70, 'neutral');
+            }
+
+            [nexusBlue, nexusRed].forEach(n => {
+                ctx.font = '50px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(n.emoji, n.x, n.y + 15);
+                drawHpBar(n.x, n.y, n.hp, n.maxHp, 70, n.team);
+            });
+
+            towers.forEach(t => {
+                if (t.hp > 0) {
+                    ctx.font = '100px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(t.emoji, t.x, t.y + 12);
+                    drawHpBar(t.x, t.y, t.hp, t.maxHp, 55, t.team);
+                }
+            });
+
+            heroes.forEach(h => {
+                if (h.hp > 0) {
+                    ctx.font = '32px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(h.emoji, h.x, h.y + 10);
+                    drawHpBar(h.x, h.y, h.hp, h.maxHp, 50, h.team);
+
+                    if (h === playerHero && gameState === 'playing') {
+                        ctx.strokeStyle = '#58a6ff';
+                        ctx.lineWidth = 2.5;
+                        ctx.beginPath();
+                        ctx.arc(h.x, h.y, 24, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+            });
+            
+            minions.forEach(m => {
+                ctx.font = '15px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(m.emoji, m.x, m.y + 8);
+                drawHpBar(m.x, m.y, m.hp, m.maxHp, 35, m.team);
+            });
+
+            projectiles.forEach(p => {
+                if (p.emoji === '🔵' || p.emoji === '🔴') {
+                    ctx.font = '11px Arial';
+                } else {
+                    ctx.font = '16px Arial';
+                }
+                ctx.textAlign = 'center';
+                ctx.fillText(p.emoji, p.x, p.y);
+            });
+
+            effects.forEach((eff, index) => {
+                ctx.font = '15px Arial';
+                ctx.textAlign     = 'center';
+                ctx.fillText(eff.emoji, eff.x, eff.y);
+                eff.life--;
+                eff.y -= 0.6;
+                if (eff.life <= 0) effects.splice(index, 1);
+            });
+
+            ctx.restore();
+
+            if (gameState === 'playing' && playerHero.hp <= 0) {
+                ctx.fillStyle = 'rgba(15, 17, 21, 0.75)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                let reqTime = playerHero.deaths * 180;
+                let leftFrames = reqTime - playerHero.respawnTimer;
+                let leftSec = Math.max(1, Math.ceil(leftFrames / 60));
+
+                ctx.fillStyle = '#f85149';
+                ctx.font = 'bold 26px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`VOCÊ FOI DERROTADO!`, canvas.width / 2, canvas.height / 2 - 30);
+
+                ctx.fillStyle = '#f1c40f';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText(`Ressuscitando em: ${leftSec}s`, canvas.width / 2, canvas.height / 2 + 5);
+
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '14px Arial';
+                ctx.fillText(`Total de mortes: ${playerHero.deaths}`, canvas.width / 2, canvas.height / 2 + 35);
+            }
+
+            if (gameState === 'blue_win' || gameState === 'red_win') {
+                const gameOverScreen = document.getElementById('game-over-screen');
+                const gameOverTitle = document.getElementById('game-over-title');
+                gameOverScreen.style.display = 'flex';
+                gameOverTitle.innerText = gameState === 'blue_win' ? 'Vitória do Time Azul! 🔵' : 'Vitória do Time Vermelho! 🔴';
+                gameOverTitle.style.color = gameState === 'blue_win' ? '#58a6ff' : '#f85149';
+            }
+        }
+
+        function gameLoop() {
+            updateAI();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
