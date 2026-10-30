@@ -6,15 +6,48 @@
     <title>Mini LoL ARAM - OneCompiler</title>
     <style>
         * { box-sizing: border-box; }
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
             margin: 0;
             overflow: hidden;
             background: #0f1115;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
         }
+
+        /* Moldura vertical 9:16, limitada a 90vw de largura e 90vh de altura. */
+        #game-frame {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(90vw, 50.625vh);
+            aspect-ratio: 9 / 16;
+            max-height: 90vh;
+            overflow: hidden;
+            background: #181c24;
+            box-shadow: 0 0 28px rgba(0, 0, 0, 0.7);
+            isolation: isolate;
+        }
+
+        /* Resolução lógica fixa: canvas e interface escalam juntos. */
+        #game-stage {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 360px;
+            height: 640px;
+            transform-origin: top left;
+        }
+
         #gameCanvas {
+            position: absolute;
+            left: 0;
+            top: 0;
             display: block;
+            width: 360px;
+            height: 640px;
             background: #181c24;
         }
         
@@ -249,6 +282,8 @@
     </style>
 </head>
 <body>
+    <div id="game-frame">
+      <div id="game-stage">
 
     <div id="selection-screen">
         <h1 class="selection-title">Selecione sua Classe</h1>
@@ -346,15 +381,28 @@
         </div>
     </div>
 
+      </div>
+    </div>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        const LOGICAL_WIDTH = 360;
+        const LOGICAL_HEIGHT = 640;
+        const gameFrame = document.getElementById('game-frame');
+        const gameStage = document.getElementById('game-stage');
+
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            // Mantém as coordenadas internas constantes e escala o palco inteiro.
+            if (canvas.width !== LOGICAL_WIDTH) canvas.width = LOGICAL_WIDTH;
+            if (canvas.height !== LOGICAL_HEIGHT) canvas.height = LOGICAL_HEIGHT;
+
+            const scale = gameFrame.clientWidth / LOGICAL_WIDTH;
+            gameStage.style.transform = `scale(${scale})`;
         }
         window.addEventListener('resize', resize);
+        window.addEventListener('orientationchange', resize);
         resize();
 
         let zoom = 1.0;
@@ -420,12 +468,17 @@
             
             document.getElementById('focus-menu').classList.remove('show'); 
             
+            // Converte o ponto físico do mouse/toque para as coordenadas lógicas do canvas.
+            const rect = canvas.getBoundingClientRect();
+            const localX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const localY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
             let screenCenterX = canvas.width / 2;
             let screenCenterY = canvas.height / 2;
             let targetCamX = playerHero.x;
             
-            let worldX = (e.clientX - screenCenterX) / zoom + targetCamX;
-            let worldY = (e.clientY - screenCenterY) / zoom + WORLD_HEIGHT / 2;
+            let worldX = (localX - screenCenterX) / zoom + targetCamX;
+            let worldY = (localY - screenCenterY) / zoom + WORLD_HEIGHT / 2;
             
             let clickedEntity = null;
             let minDist = 45; 
